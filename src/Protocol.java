@@ -1,0 +1,470 @@
+import java.io.*;
+import java.util.*;
+
+class Protocol {
+//peerinfo.cfg
+	int NumPeers;
+	int PeerID[];
+	String[] Hostname;
+	int Ports[];
+	int HaveFile[];
+//Common.cfg	
+	int NumPN;
+	int Interval;
+	int OptInterval;
+	String FileName;
+	int FileSize;
+	int PieceSize;
+	int NumPieces;
+	boolean FileStatus;		//true if file is completely present else false
+//Others
+	int myPeerID;
+	boolean bitField[];
+	boolean requestBitField[];
+//File read write API's
+	static private RandomAccessFile fc;
+	static private int isFileOpen=0;
+	
+//Functions
+	public Protocol(int myID) {
+		Scanner s=null;
+		List<Integer> lPeerID = new ArrayList<Integer>();
+		List<String> lHostname = new ArrayList<String>();
+		List<Integer> lPorts = new ArrayList<Integer>();
+		List<Integer> lHaveFile = new ArrayList<Integer>();
+		int i;
+		
+		myPeerID = myID;
+		/*Read data from PeerInfo.cfg*/
+		try {
+			NumPeers=0;
+			s = new Scanner (new BufferedReader(new FileReader("/home/prakash/workspace/bittorrent/src/PeerInfo.cfg")));
+			//s = new Scanner(new File("/home/prakash/workspace/bittorrent/src/PeerInfo.cfg") );
+			while (s.hasNext()) {
+				lPeerID.add(s.nextInt());
+				lHostname.add(s.next());
+				lPorts.add(s.nextInt());
+				lHaveFile.add(s.nextInt());
+				NumPeers++;
+			}
+		} catch (FileNotFoundException exp) {
+			System.out.println("PeerInfo.cfg Not Found");
+		}finally {
+			if ( s != null) {
+				s.close();
+			}
+		}
+		PeerID = new int[NumPeers];
+		Hostname = new String[NumPeers];
+		Ports = new int[NumPeers];
+		HaveFile = new int[NumPeers];
+
+		for (i=0 ; i < NumPeers ; i++) {
+			PeerID[i] = lPeerID.get(i);
+			Hostname[i] = lHostname.get(i);
+			Ports[i] = lPorts.get(i);
+			HaveFile[i] = lHaveFile.get(i);
+		}
+		
+		/*Read data from Common.cfg*/
+		try {
+			s = new Scanner (new BufferedReader(new FileReader("/home/prakash/workspace/bittorrent/src/Common.cfg")));
+			while (s.hasNext()) {
+				String str = s.next();
+				if ("NumberOfPreferredNeighbors".equals(str)) {
+					NumPN = s.nextInt();
+				} else if ("UnchokingInterval".equals(str)) {
+					Interval = s.nextInt();
+				} else if ("OptimisticUnchokingInterval".equals(str)) {
+					OptInterval = s.nextInt();
+				} else if ("FileName".equals(str)) {
+					FileName = s.next();
+				} else if ("FileSize".equals(str)) {
+					FileSize = s.nextInt();
+				} else if ("PieceSize".equals(str)) {
+					PieceSize = s.nextInt();
+				} else {
+					System.out.println("Unknown option in Common.cfg" + str);
+					break;
+				}
+			}
+			NumPieces = FileSize/PieceSize;
+			if (FileSize % PieceSize != 0)
+				NumPieces++;
+		} catch (FileNotFoundException exp) {
+			System.out.println("Common.cfg Not Found");
+		}finally {
+			if ( s != null) {
+				s.close();
+			}
+		}
+		bitField = new boolean[NumPieces];
+		requestBitField = new boolean[NumPieces];
+	}
+	
+	public void initIO(){
+		int idx=-1,i;
+		for (i=0 ; i<NumPeers ; i++) {
+			if (PeerID[i]==myPeerID) {
+				idx=i;
+				break;
+			}
+		}
+		if (idx == -1)
+			System.out.println("Peer not found: PeerID" + myPeerID);
+		if (isFileOpen == 1)
+			return;
+		if (HaveFile[idx] == 1) {
+			try {
+				/*Open File*/
+				fc = new RandomAccessFile(FileName, "r");
+				isFileOpen = 1;
+			} catch (FileNotFoundException exp) {
+				System.out.println("Data file not found" + exp.getMessage());
+			}
+			for(i=0 ; i < bitField.length ;i++){
+				bitField[i] = true;
+				requestBitField[i] = true;
+			}
+			FileStatus = true;	//Set the status to true if the file is completely available
+		} else {
+			FileStatus = false;
+			try {
+				fc = new RandomAccessFile(FileName, "rwd");
+				isFileOpen = 1;
+			} catch (IllegalArgumentException  exp) {
+				System.out.println("Excepion:"+exp.getMessage());
+			} catch (SecurityException exp){
+				System.out.println("Excepion:"+exp.getMessage());
+			} catch (FileNotFoundException exp){
+				System.out.println("Excepion:"+exp.getMessage());
+			}
+			/*Allocate file length*/
+			try {
+				fc.setLength(FileSize);
+			} catch (IOException exp) {
+				System.out.println("IOExcepion while setting length:"+exp.getMessage());
+			}
+		}
+	}
+	
+	/*
+	 * Reads a piece from a given piece index
+	 */
+	public byte[] readPiece(int pieceIndex) {
+		byte returnBuffer[] = new byte[PieceSize];
+		int len = PieceSize;
+		
+		if (pieceIndex >= NumPieces) {
+			System.out.println("Error readpiece: Invalid Piece Index");
+			return returnBuffer;
+		} else if (pieceIndex == NumPieces-1) { //Asking last chunk, so len can be < PieceSize
+			if (FileSize % PieceSize != 0)
+				len = FileSize % PieceSize;
+		}
+		try {
+			synchronized(fc) {
+				fc.seek(pieceIndex * PieceSize);
+				fc.readFully(returnBuffer, 0, len);
+			}
+		} catch (IOException exp) {
+			System.out.println ("IOException in readPiece" + exp.getMessage());
+		}
+		return returnBuffer;
+	}
+	
+	/*
+	 * Writes a Piece to the file at given pieceIndex
+	 */
+	public int writePiece (int pieceIndex, byte[] buffer) {
+		int len=PieceSize;
+		
+		if (pieceIndex >= NumPieces) {
+			System.out.println("Error readpiece: Invalid Piece Index");
+			return -1;
+		} else if (pieceIndex == NumPieces-1) { //Asking last chunk, so len can be < PieceSize
+			if (FileSize % PieceSize != 0)
+				len = FileSize % PieceSize;
+		}
+		try {
+			synchronized(fc){
+				fc.seek(pieceIndex * PieceSize);
+				fc.write(buffer, 0, len);
+			}
+			return 0;
+		} catch (IOException exp) {
+			System.out.println ("IOException in writePiece" + exp.getMessage());
+			return -1;
+		}
+	}
+
+	/*
+	 * Actual Protocol begins Now 
+	 */
+	
+	private final byte header[]= {'C','E','N','5','5','0','1','C','2','0','0','8','S','P','R','I','N','G'};
+	
+	private final int handshakeLen = 32;
+	private final byte MSGLEN=4;
+
+	private final byte CHOKE=0;
+	private final byte UNCHOKE=1;
+	private final byte INTERESTED=2;
+	private final byte NOTINTERESTED=3;
+	private final byte HAVE=4;
+	private final byte BITFIELD=5;
+	private final byte REQUEST=6;
+	private final byte PIECE=7;
+	
+	
+	public void UpdateBitField(int pieceIndex){
+		bitField[pieceIndex]=true;
+	}
+	/*
+	 * IntToByte(int num, byte[] buf, int offset);
+	 */
+	public void IntToByte(int num, byte[] buf, int offset) {
+		buf[offset] = (byte)(num & 0xFF);
+		buf[offset+1] = (byte)((num>>>8) & 0xFF);
+		buf[offset+2] = (byte)((num>>>16) & 0xFF);
+		buf[offset+3] = (byte)((num>>>24) & 0xFF);
+	}
+	
+	public int ByteToInt(byte[] buf, int offset) {
+		return (int)buf[offset] + (int)(buf[offset+1] << 8) +
+			(int)(buf[offset+1] << 16) + (int)(buf[offset+1] << 24);
+	}
+	
+	/*
+	 * Returns a byte[] to send as handshake Message
+	 */
+	public byte[] getHandshake(int myPeerID) {
+		byte Handshake[] = new byte[32];
+		
+		System.arraycopy(header, 0, Handshake, 0, header.length);
+		IntToByte(myPeerID, Handshake, handshakeLen-4);
+		return Handshake;
+	}
+	
+	/*
+	 *Verifies header and returns myPeerID 
+	 */
+	public int verifyHandshake(byte[] Handshake) {	
+		int myPeerID=-1;
+		byte hdr[] = new byte[header.length];
+		
+		if (hdr.equals(header) == false) {
+			System.out.println("Wrong Header");
+			return myPeerID;
+		}
+		myPeerID= ByteToInt(Handshake, handshakeLen-4);
+		return myPeerID;
+	}
+	
+	/*
+	 * ------------------------------------------------------------------
+	 * | 	MSGLENGTH	|	MSGTYPE		|		Message Payload			|
+	 * | 	(4 bytes)	|	(1 byte)	|		(0 t0 many bytes)		|
+	 * | 	(0 to 3)	|	(4)			|		(5 to X)				|
+	 * ------------------------------------------------------------------
+	 */
+	public byte[] getChoke(node nd){
+		byte[] Msg = new byte[MSGLEN+1];
+		IntToByte(1, Msg, 0);
+		Msg[4] = CHOKE;
+		nd.PeerChokeStatus = true;
+		return Msg;
+	}
+	
+	public byte[] getUnchoke(node nd){
+		byte[] Msg = new byte[MSGLEN+1];
+		IntToByte(1,Msg,0);
+		Msg[4] = UNCHOKE;
+		nd.PeerChokeStatus = false;
+		return Msg;
+	}
+	
+	public byte[] getInterested(node nd){
+		byte[] Msg = new byte[MSGLEN+1];
+		IntToByte(1,Msg,0);
+		Msg[4] = INTERESTED;
+		nd.PeerInterestStatus = true;			//Our interest status in the Peer (as stored by InterestStatus in other Peer) 
+		return Msg;
+	}
+
+	public byte[] getNotInterested(node nd){
+		byte[] Msg = new byte[MSGLEN+1];
+		IntToByte(1,Msg,0);
+		Msg[4] = NOTINTERESTED;
+		nd.PeerInterestStatus = false;			//We are no more interested in peer 
+		return Msg;
+	}
+	
+	public byte[] getHave(node nd) {
+		int MsgLen = 1+4;
+		byte[] Msg = new byte[MSGLEN + MsgLen]; 
+		IntToByte(MsgLen,Msg,0);				//Message Length
+		Msg[4] = HAVE;							//Message Type
+		IntToByte(nd.lastReceivedPieceID, Msg, MSGLEN+1);	//Message Payload
+		return Msg;
+	}
+	
+	/*
+	 * Generate byte[] from boolean[]
+	 */
+	public byte[] generateBitfield (boolean bitField[]) {
+		byte retBuf[] = new byte[bitField.length + 1];
+		byte mask=(byte)0x80;
+		for (int i=0 ; i<bitField.length ; i++) {
+			if (bitField[i] == true) {
+				retBuf[i/8]= (byte)((int)retBuf[i/8] ^ (int)(mask >>> (i%8)));
+			}
+		}
+		return retBuf;
+	}
+	
+	public byte[] getBitfield() {
+		int MsgLen = (bitField.length/8 + 1) + 1; //payload + msg_type
+		byte[] Msg = new byte[MSGLEN + MsgLen]; 
+		byte[] psuedoBitField = generateBitfield(bitField);
+		IntToByte(MsgLen,Msg,0);				//Message Length
+		Msg[4] = BITFIELD;						// Message Type
+		System.arraycopy(psuedoBitField, 0, Msg, MSGLEN+1, psuedoBitField.length); //Payload
+		return Msg;
+	}
+	
+	//If it returns -1 it means it is complete
+	private int CheckForCompletion() {
+		for (int i=0; i<NumPieces ; i++) {
+			if (bitField[i] == true) {
+				continue;
+			} 
+			else{
+				if (requestBitField[i] == false) {
+					return i;
+				}
+			}
+		}
+		FileStatus = true;	//Indicate that the file is complete
+		return -1;
+	}
+	 
+	//Selects a random piece and makes a request packet
+	/*
+	 * It is expected that the user of this routine checks the file status before and after the function call
+	 * THE RETURNED PACKET IS ""VALID"" IF AND ONLY IF, FileStatus IS ""FALSE"" 
+	 */
+	public byte[] getRequest() {
+		int MsgLen = 1 + 4;
+		byte[]Msg = new byte[MSGLEN + MsgLen];
+		Random gen = new Random();
+		int rand = gen.nextInt() % NumPieces;
+		int count=0;
+		while (true) {
+			if (FileStatus == true) {
+				System.out.println("Oh my god ..file is comple why on earth you need a request packet" +
+						"Send him a dummy packet and hope he checks the FileStatus");
+				break;
+			}
+			while (bitField[rand]== true || ( bitField[rand]== false && requestBitField[rand]==true )) {
+				rand = gen.nextInt() % NumPieces;
+				count++;
+				if (count == NumPieces) {
+					rand = CheckForCompletion();
+					break;
+				}
+			}
+			/*Take lock and set the bit*/
+			synchronized(requestBitField) {	
+				if (requestBitField[rand] == false && bitField[rand] == true) {
+					requestBitField[rand] = true;
+					break;
+				}
+				else {
+					continue;	//Oops someone modified it..it is alright continue
+				}
+			}
+		}
+		IntToByte(MsgLen,Msg,0);			//Write Messaage Length
+		Msg[4] = REQUEST;					//Message Type
+		IntToByte(rand, Msg, MSGLEN+1);		//Payload
+		return Msg;
+	}
+	
+	public byte[] getPiece(int pieceIndex) {
+		int MsgLen = 1 + 4 + PieceSize;
+		byte[] Msg = new byte[MSGLEN + MsgLen];
+		IntToByte(MsgLen,Msg,0);				//Message Length
+		Msg[4] = PIECE;							//Message Type
+		IntToByte(pieceIndex, Msg, MSGLEN+1);	//Payload a. Piece Index
+
+		byte[] Piece = readPiece(pieceIndex);	//Read Piece	
+		// (Msg Length)0-3  (Msg Type)4  (Piece Index)5-8	(Piece data) 9-X
+		System.arraycopy(Piece, 0, Msg, 9, PieceSize); // Payload b. Piece data 
+		return Msg;
+	}
+
+	/*
+	 * processMessage
+	 * 0 => NO need to notify any thread
+	 * +ve => Needs notification
+	 */
+	public int processMessage(byte[] packet, node nd) {
+		int retVal=0;
+		switch (packet[4]) {
+		case CHOKE:
+			nd.Chokestatus = true; 
+			break;
+		case UNCHOKE:
+			nd.Chokestatus = false; //NOMORE-tODO: have to randomly generate the request piece id. Also, change retVal.
+			nd.send_request_msg=true;/* We cannot set a boolean every time a request should be sent.
+									  * So the user of protocol is expected to check the Chokestatus and FileStatus and decide to send
+									  * if he decides to send, he will use getRequest()
+									  */
+			retVal=1;
+			break;
+		case INTERESTED:
+			nd.InterestStatus = true;
+			break;
+		case NOTINTERESTED:
+			nd.InterestStatus = false;
+			break;
+		case HAVE:
+			nd.UpdateBitField(ByteToInt(packet,5), this);
+			retVal=1;	//We might have to send a interested message
+			break;
+		case BITFIELD:
+			nd.UpdateBitField(packet,5);
+			retVal=2;	//We might have to send a interested message 
+			break;
+		case REQUEST: {
+			synchronized(nd){
+				if (nd.send_piece_msg == true) {
+					System.out.println("Request received even before servicing the old request");
+				}
+				if (nd.PeerChokeStatus == true) {
+					System.out.println("GOTCHA!!! - You are not supposed to send a piece request, you have been choked, still we will send you a piece in a peaceful manner");
+				}
+				nd.RequestpieceID = ByteToInt(packet, 5);
+				nd.send_piece_msg = true;
+			}
+			retVal=3;
+			break;
+		}
+		case PIECE:
+			byte[] pieceData = new byte[PieceSize];
+			int pieceIndex = ByteToInt(packet, 5);
+			if (writePiece(pieceIndex, pieceData) < 0) {
+				System.out.println("Error Writing piece " + pieceIndex);
+			}
+			UpdateBitField(pieceIndex);		
+			nd.notifyHaveMsg(pieceIndex);
+			retVal=4;
+			nd.send_request_msg=true;
+			break;
+		default:
+			break;
+		}
+		return retVal;
+	}
+}
