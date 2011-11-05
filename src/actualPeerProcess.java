@@ -44,10 +44,10 @@ public class actualPeerProcess {
 				node opt_node = node_array.get(random_peer_index);
 				
 				/*
-				 * WARNING:::::: check if number of preferred neighbours and the total number of peers are the same
-				 * If not, it cannot select any optimistic neighbour, since all the neighbours will be part of preferred neighbour list
+				 * WARNING:::::: check if number of preferred neighbors and the total number of peers are the same
+				 * If not, it cannot select any optimistic neighbor, since all the neighbors will be part of preferred neighbor list
 				 * 
-				 * Check if preffered neighbours > no of peers
+				 * Check if preferred neighbors > no of peers
 				 */
 				if(prot.NumPeers-1 != prot.NumPN){
 					
@@ -65,6 +65,8 @@ public class actualPeerProcess {
 					//choke message type = UNCHOKE
 					opt_node.ChokeMessageType = false;
 				}
+				prot.logging.log("Peer [" + Integer.toString(prot.myPeerID) + "] has optimistically unchoked neighbor " 
+						+ Integer.toString(opt_node.PeerID));
 				
 				Thread.currentThread().sleep(prot.OptInterval*1000);
 			}

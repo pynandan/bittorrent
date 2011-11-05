@@ -35,6 +35,7 @@ public class ConnectionThread implements Runnable{
 				}
 				
 				Socket client_socket = new Socket(prot.Hostname[i], prot.Ports[i]);
+				
 				node peer_node = new node(prot, node_array);
 				peer_node.socket = client_socket;
 								
@@ -47,7 +48,7 @@ public class ConnectionThread implements Runnable{
 	            //get handshake from the other peer
 	            String str_msg = peer_node.br.readLine();
 	            msg = str_msg.getBytes();	            
-	            peer_node.PeerID = prot.verifyHandshake(msg);
+	            peer_node.PeerID = prot.verifyHandshake(msg, true);
 	            
 	            //send bitfield msg
 	            msg = prot.getBitfield();
@@ -78,7 +79,7 @@ public class ConnectionThread implements Runnable{
 	            //get the handshake msg
 	            String str_msg = peer_node.br.readLine();
 	            byte[] msg = str_msg.getBytes();
-	            peer_node.PeerID = prot.verifyHandshake(msg);
+	            peer_node.PeerID = prot.verifyHandshake(msg, false);
 	            //send handshake msg to the other peer
 	            msg = prot.getHandshake(peer_id);
 	            peer_node.pw.println(msg);

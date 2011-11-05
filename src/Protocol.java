@@ -19,11 +19,56 @@ class Protocol {
 	boolean FileStatus;		//true if file is completely present else false
 //Others
 	int myPeerID;
+	int curPieces;
 	boolean bitField[];
 	boolean requestBitField[];
 //File read write API's
 	static private RandomAccessFile fc;
 	static private int isFileOpen=0;
+	writeLog logging;
+	
+	class writeLog{
+		int myPeerID;
+		BufferedWriter writer;
+		
+		writeLog (int myID){
+			//Create a directory with name peer_<peerID>
+			String dirname="peer_"+Integer.toString(myID);
+			String filename="log_peer_"+Integer.toString(myID)+".log";
+			
+			try {
+				boolean success = (new File(dirname)).mkdir();
+				if (success) {
+					System.err.println("Error Creating Directory" + myID);
+				}
+			}
+			catch (Exception e){
+				System.err.println("Error:"+e.getMessage());
+			}
+			
+			//Open Log file with name "log_peer_<PeerID>.log"
+			try {
+				writer = new BufferedWriter(new FileWriter(dirname+filename));
+			} 
+			catch (Exception e){
+				System.err.println("Error:"+e.getMessage());
+			}
+		}
+		
+		synchronized void log(String str){
+			Date date;
+			try {
+				date = new Date();
+				writer.write("["+Long.toString(date.getTime()) + "]:"+str);
+				writer.newLine();
+				writer.flush();
+			} 
+			catch (Exception e) {
+				System.err.println("Error:"+e.getMessage());
+			}
+		}
+		
+	}
 	
 //Functions
 	public Protocol(int myID) {
@@ -32,14 +77,13 @@ class Protocol {
 		List<String> lHostname = new ArrayList<String>();
 		List<Integer> lPorts = new ArrayList<Integer>();
 		List<Integer> lHaveFile = new ArrayList<Integer>();
-		int i;
+		int i; 
 		
 		myPeerID = myID;
 		/*Read data from PeerInfo.cfg*/
 		try {
 			NumPeers=0;
 			s = new Scanner (new BufferedReader(new FileReader("/home/prakash/workspace/bittorrent/src/PeerInfo.cfg")));
-			//s = new Scanner(new File("/home/prakash/workspace/bittorrent/src/PeerInfo.cfg") );
 			while (s.hasNext()) {
 				lPeerID.add(s.nextInt());
 				lHostname.add(s.next());
@@ -100,6 +144,9 @@ class Protocol {
 		}
 		bitField = new boolean[NumPieces];
 		requestBitField = new boolean[NumPieces];
+		
+		//Initialize logging
+		logging =new writeLog(myPeerID);
 	}
 	
 	public void initIO(){
@@ -127,6 +174,7 @@ class Protocol {
 				requestBitField[i] = true;
 			}
 			FileStatus = true;	//Set the status to true if the file is completely available
+			curPieces = NumPieces;
 		} else {
 			FileStatus = false;
 			try {
@@ -145,6 +193,7 @@ class Protocol {
 			} catch (IOException exp) {
 				System.out.println("IOExcepion while setting length:"+exp.getMessage());
 			}
+			curPieces = 0;
 		}
 	}
 	
@@ -247,18 +296,29 @@ class Protocol {
 	}
 	
 	/*
-	 *Verifies header and returns myPeerID 
+	 *Verifies header and returns PeerID in the Handshake 
+	 *
+	 *if to == true, connected to
+	 *   to == false, connected from
 	 */
-	public int verifyHandshake(byte[] Handshake) {	
-		int myPeerID=-1;
+	public int verifyHandshake(byte[] Handshake, boolean to) {	
+		int PeerID=-1;
 		byte hdr[] = new byte[header.length];
 		
 		if (hdr.equals(header) == false) {
 			System.out.println("Wrong Header");
-			return myPeerID;
+			return PeerID;
 		}
-		myPeerID= ByteToInt(Handshake, handshakeLen-4);
-		return myPeerID;
+		PeerID= ByteToInt(Handshake, handshakeLen-4);
+		
+		if (to) {
+			logging.log("Peer [" + Integer.toString(myPeerID) + 
+					"] makes a connection to Peer [" + Integer.toString(PeerID) + "]");
+		} else {
+			logging.log("Peer [" + Integer.toString(myPeerID) + 
+					"] is connected from Peer [" + Integer.toString(PeerID) + "]");
+		}
+		return PeerID;
 	}
 	
 	/*
@@ -366,6 +426,13 @@ class Protocol {
 						"Send him a dummy packet and hope he checks the FileStatus");
 				break;
 			}
+			if (curPieces == NumPieces) {
+				int res = CheckForCompletion();
+				if (res == -1) {
+					logging.log("Peer [" + Integer.toString(myPeerID) + "] has downloaded the complete file");
+					break;
+				}
+			}
 			while (bitField[rand]== true || ( bitField[rand]== false && requestBitField[rand]==true )) {
 				rand = gen.nextInt() % NumPieces;
 				count++;
@@ -414,23 +481,31 @@ class Protocol {
 		switch (packet[4]) {
 		case CHOKE:
 			nd.Chokestatus = true; 
+			logging.log("Peer [" + Integer.toString(myPeerID) + "] is choked by " + Integer.toString(nd.PeerID));
 			break;
 		case UNCHOKE:
-			nd.Chokestatus = false; //NOMORE-tODO: have to randomly generate the request piece id. Also, change retVal.
+			nd.Chokestatus = false; 
 			nd.send_request_msg=true;/* We cannot set a boolean every time a request should be sent.
 									  * So the user of protocol is expected to check the Chokestatus and FileStatus and decide to send
 									  * if he decides to send, he will use getRequest()
 									  */
+			logging.log("Peer [" + Integer.toString(myPeerID) + "] is unchoked by " + Integer.toString(nd.PeerID));
 			retVal=1;
 			break;
 		case INTERESTED:
 			nd.InterestStatus = true;
+			logging.log("Peer [" + Integer.toString(myPeerID) + "] received the interested message from " 
+					+ Integer.toString(nd.PeerID));
 			break;
 		case NOTINTERESTED:
 			nd.InterestStatus = false;
+			logging.log("Peer [" + Integer.toString(myPeerID) + "] received the not interested message from " 
+					+ Integer.toString(nd.PeerID));
 			break;
 		case HAVE:
 			nd.UpdateBitField(ByteToInt(packet,5), this);
+			logging.log("Peer [" + Integer.toString(myPeerID) + "] received the have message from " 
+					+ Integer.toString(nd.PeerID) + "for piece " + ByteToInt(packet,5));
 			retVal=1;	//We might have to send a interested message
 			break;
 		case BITFIELD:
@@ -457,6 +532,9 @@ class Protocol {
 			if (writePiece(pieceIndex, pieceData) < 0) {
 				System.out.println("Error Writing piece " + pieceIndex);
 			}
+			curPieces ++;
+			logging.log("Peer [" + Integer.toString(myPeerID) + "] has downloaded the piece " + pieceIndex  + " from " 
+					+ Integer.toString(nd.PeerID) + "Now the number of pieces it has is " + Integer.toString(curPieces));
 			UpdateBitField(pieceIndex);		
 			nd.notifyHaveMsg(pieceIndex);
 			retVal=4;
