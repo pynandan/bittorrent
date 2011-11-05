@@ -55,35 +55,46 @@ public class SendThread implements Runnable{
 							else
 								msg = prot.getUnchoke(temp_node);
 							temp_node.send_choke_msg = false;
+							if(msg != null)
+								temp_node.pw.println(msg);
 						}
 						//have message, **SET request_piece_id to -1 only in Sender Thread
 						if(temp_node.send_have_msg == true){
-							msg = prot.getHave(temp_node); //TODO: CHECK THIS with below todo marked
+							msg = prot.getHave(temp_node); 
 							temp_node.send_have_msg = false;
+							if(msg != null)
+								temp_node.pw.println(msg);
 						}
 						//interested message
 						if(temp_node.send_interested_msg == true){
 							msg = prot.getInterested(temp_node);
 							temp_node.send_interested_msg = false;
+							if(msg != null)
+								temp_node.pw.println(msg);
 						}
 						if(temp_node.send_piece_msg == true){
 							msg = prot.getPiece(temp_node.RequestpieceID); //tODO: CHECK THIS with above todo marked
 							temp_node.send_piece_msg = false;
+							if(msg != null)
+								temp_node.pw.println(msg);
 						}
 						//if our state is unchoked send a request (#PP)
-						if (prot.FileStatus == false && temp_node.PeerChokeStatus == false) {
+						if (temp_node.send_request_msg == true && 
+								prot.FileStatus == false && 
+								temp_node.PeerChokeStatus == false) {
+
 							msg = prot.getRequest();
+							if(msg != null)
+								temp_node.pw.println(msg);
+
 							if (prot.FileStatus == false) {
-								temp_node.send_request_msg = false; // Wait till it is set to true by protocol
-							} 
-							else {
-								msg=null;
-							}
+								 temp_node.send_request_msg = false; // Wait till it is set to true by protocol
+							 } 
+							 else {
+								 msg=null;
+							 }
 						}
 						//just to be safe, check for null message and then send the message
-						//TODO:(#PP) I think we should do this within each if sections, or a have msg may be replaced by interested ms
-						if(msg != null)
-							temp_node.pw.println(msg);
 					}
 				}
 			}
