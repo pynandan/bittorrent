@@ -17,19 +17,40 @@ public class PreferredThread implements Runnable{
 		try{
 			
 			while(true){
-				node preferred_list[] = new node[prot.NumPN]; //consists of the peer ids of the preferred neighbours chosen in this cycle
+				node preferred_list[] = new node[prot.NumPN]; //consists of the peer ids of the preferred neighbors chosen in this cycle
 				
 				synchronized(peerProcObj.sharedObj){
-					
 					//get the preferred list using the download rate of each peer
+					int cnt=0; //Number of entries in preferred_list
 					for(int i = 0; i < peerProcObj.node_array.size(); i++){
-						for(int j = 0; j < prot.NumPN; j++){
-							if(preferred_list[j] == null || 
-									(preferred_list[j].DownloadRate < peerProcObj.node_array.get(i).DownloadRate 
-											&& peerProcObj.node_array.get(i).InterestStatus == true))
-								preferred_list[j] = peerProcObj.node_array.get(i);
-						}					
+						//See if ith particular node is interested
+						if (peerProcObj.node_array.get(i).InterestStatus != true) {
+							continue;
+						}
+						
+						//Fillup the preferred_list first
+						if (cnt < prot.NumPN) {
+							preferred_list[cnt] = peerProcObj.node_array.get(i);
+							cnt++;
+							continue;
+						}
+						//Find smallest among the preferred_list
+						int smallest=0;
+						for(int j = 1; j < prot.NumPN ; j++){
+							if (preferred_list[smallest].DownloadRate > preferred_list[j].DownloadRate)
+								smallest=j;
+						}
+						//If smallest is smaller than current one, then replace
+						if(preferred_list[smallest].DownloadRate < peerProcObj.node_array.get(i).DownloadRate)
+							preferred_list[smallest] = peerProcObj.node_array.get(i);
 					}
+					
+					//Aggregate the peerID's of preferred neighbors
+					String logStr="Peer [" + Integer.toString(prot.myPeerID) + "] has the preferred neighbours ";
+					for (int j=0; (j < prot.NumPN)  && (preferred_list[j] != null); j++)
+						logStr = logStr + "," + Integer.toString(preferred_list[j].PeerID);
+					//Write to Log
+					prot.logging.log(logStr);					
 					
 					//now set the send_choke_msg and ChokeMessageType for each node
 					for(int i = 0; i < prot.NumPN; i++){
