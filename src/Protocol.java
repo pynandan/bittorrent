@@ -69,6 +69,10 @@ class Protocol {
 			}
 		}
 		
+		void debug(String str) {
+			log("Debug: " + str);
+		}
+		
 	}
 	
 //Functions
@@ -81,6 +85,10 @@ class Protocol {
 		int i; 
 		
 		myPeerID = myID;
+		
+		//Initialize logging
+		logging =new writeLog(myPeerID);
+		
 		/*Read data from PeerInfo.cfg*/
 		try {
 			NumPeers=0;
@@ -93,7 +101,7 @@ class Protocol {
 				NumPeers++;
 			}
 		} catch (FileNotFoundException exp) {
-			System.out.println("PeerInfo.cfg Not Found");
+			logging.debug("PeerInfo.cfg Not Found");
 		}finally {
 			if ( s != null) {
 				s.close();
@@ -137,7 +145,7 @@ class Protocol {
 			if (FileSize % PieceSize != 0)
 				NumPieces++;
 		} catch (FileNotFoundException exp) {
-			System.out.println("Common.cfg Not Found");
+			logging.debug("Common.cfg Not Found");
 		}finally {
 			if ( s != null) {
 				s.close();
@@ -145,9 +153,6 @@ class Protocol {
 		}
 		bitField = new boolean[NumPieces];
 		requestBitField = new boolean[NumPieces];
-		
-		//Initialize logging
-		logging =new writeLog(myPeerID);
 	}
 	
 	public void initIO(){
@@ -159,7 +164,7 @@ class Protocol {
 			}
 		}
 		if (idx == -1)
-			System.out.println("Peer not found: PeerID" + myPeerID);
+			logging.debug("Peer not found: PeerID" + myPeerID);
 		if (isFileOpen == 1)
 			return;
 
@@ -171,7 +176,7 @@ class Protocol {
 				fc = new RandomAccessFile(FileName, "r");
 				isFileOpen = 1;
 			} catch (FileNotFoundException exp) {
-				System.out.println("Data file not found" + exp.getMessage());
+				logging.debug("Data file not found" + exp.getMessage());
 			}
 			for(i=0 ; i < bitField.length ;i++){
 				bitField[i] = true;
@@ -184,18 +189,14 @@ class Protocol {
 			try {
 				fc = new RandomAccessFile(newFileName, "rwd");
 				isFileOpen = 1;
-			} catch (IllegalArgumentException  exp) {
-				System.out.println("Excepion:"+exp.getMessage());
-			} catch (SecurityException exp){
-				System.out.println("Excepion:"+exp.getMessage());
-			} catch (FileNotFoundException exp){
-				System.out.println("Excepion:"+exp.getMessage());
+			} catch (Exception  exp) {
+				logging.debug("Excepion:"+exp.getMessage());
 			}
 			/*Allocate file length*/
 			try {
 				fc.setLength(FileSize);
 			} catch (IOException exp) {
-				System.out.println("IOExcepion while setting length:"+exp.getMessage());
+				logging.debug("IOExcepion while setting length:"+exp.getMessage());
 			}
 			curPieces = 0;
 		}
@@ -209,7 +210,7 @@ class Protocol {
 		int len = PieceSize;
 		
 		if (pieceIndex >= NumPieces) {
-			System.out.println("Error readpiece: Invalid Piece Index");
+			logging.debug("Error readpiece: Invalid Piece Index");
 			return returnBuffer;
 		} else if (pieceIndex == NumPieces-1) { //Asking last chunk, so len can be < PieceSize
 			if (FileSize % PieceSize != 0)
@@ -221,7 +222,7 @@ class Protocol {
 				fc.readFully(returnBuffer, 0, len);
 			}
 		} catch (IOException exp) {
-			System.out.println ("IOException in readPiece" + exp.getMessage());
+			logging.debug("IOException in readPiece" + exp.getMessage());
 		}
 		return returnBuffer;
 	}
@@ -233,7 +234,7 @@ class Protocol {
 		int len=PieceSize;
 		
 		if (pieceIndex >= NumPieces) {
-			System.out.println("Error readpiece: Invalid Piece Index");
+			logging.debug("Error readpiece: Invalid Piece Index");
 			return -1;
 		} else if (pieceIndex == NumPieces-1) { //Asking last chunk, so len can be < PieceSize
 			if (FileSize % PieceSize != 0)
@@ -246,7 +247,7 @@ class Protocol {
 			}
 			return 0;
 		} catch (IOException exp) {
-			System.out.println ("IOException in writePiece" + exp.getMessage());
+			logging.debug("IOException in writePiece" + exp.getMessage());
 			return -1;
 		}
 	}
@@ -426,7 +427,7 @@ class Protocol {
 		int count=0;
 		while (true) {
 			if (FileStatus == true) {
-				System.out.println("Oh my god ..file is comple why on earth you need a request packet" +
+				logging.debug("Oh my god ..file is complete why on earth you need a request packet" +
 						"Send him a dummy packet and hope he checks the FileStatus");
 				break;
 			}
@@ -519,10 +520,10 @@ class Protocol {
 		case REQUEST: {
 			synchronized(nd){
 				if (nd.send_piece_msg == true) {
-					System.out.println("Request received even before servicing the old request");
+					logging.debug("Request received even before servicing the old request");
 				}
 				if (nd.PeerChokeStatus == true) {
-					System.out.println("GOTCHA!!! - You are not supposed to send a piece request, you have been choked, still we will send you a piece in a peaceful manner");
+					logging.debug("GOTCHA!!! - You are not supposed to send a piece request, you have been choked, still we will send you a piece in a peaceful manner");
 				}
 				nd.RequestpieceID = ByteToInt(packet, 5);
 				nd.send_piece_msg = true;
