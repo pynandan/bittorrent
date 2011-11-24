@@ -286,7 +286,7 @@ class Protocol {
 	
 	public int ByteToInt(byte[] buf, int offset) {
 		return (int)buf[offset] + (int)(buf[offset+1] << 8) +
-			(int)(buf[offset+1] << 16) + (int)(buf[offset+1] << 24);
+			(int)(buf[offset+2] << 16) + (int)(buf[offset+3] << 24);
 	}
 	
 	/*
@@ -310,8 +310,9 @@ class Protocol {
 		int PeerID=-1;
 		byte hdr[] = new byte[header.length];
 		
+		System.arraycopy(Handshake, 0, hdr, 0, header.length);
 		if (hdr.equals(header) == false) {
-			System.out.println("Wrong Header");
+			logging.debug("Wrong Header");
 			return PeerID;
 		}
 		PeerID= ByteToInt(Handshake, handshakeLen-4);
@@ -378,7 +379,7 @@ class Protocol {
 	 * Generate byte[] from boolean[]
 	 */
 	public byte[] generateBitfield (boolean bitField[]) {
-		byte retBuf[] = new byte[bitField.length + 1];
+		byte retBuf[] = new byte[bitField.length/8 + 1];
 		byte mask=(byte)0x80;
 		for (int i=0 ; i<bitField.length ; i++) {
 			if (bitField[i] == true) {
