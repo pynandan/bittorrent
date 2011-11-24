@@ -17,6 +17,7 @@ class Protocol {
 	int PieceSize;
 	int NumPieces;
 	boolean FileStatus;		//true if file is completely present else false
+	String dirname;
 //Others
 	int myPeerID;
 	int curPieces;
@@ -33,7 +34,7 @@ class Protocol {
 		
 		writeLog (int myID){
 			//Create a directory with name peer_<peerID>
-			String dirname="peer_"+Integer.toString(myID);
+			dirname="peer_"+Integer.toString(myID);
 			String filename="log_peer_"+Integer.toString(myID)+".log";
 			
 			try {
@@ -48,7 +49,7 @@ class Protocol {
 			
 			//Open Log file with name "log_peer_<PeerID>.log"
 			try {
-				writer = new BufferedWriter(new FileWriter(dirname+filename));
+				writer = new BufferedWriter(new FileWriter(dirname+"/"+filename));
 			} 
 			catch (Exception e){
 				System.err.println("Error:"+e.getMessage());
@@ -83,7 +84,7 @@ class Protocol {
 		/*Read data from PeerInfo.cfg*/
 		try {
 			NumPeers=0;
-			s = new Scanner (new BufferedReader(new FileReader("/home/prakash/workspace/bittorrent/src/PeerInfo.cfg")));
+			s = new Scanner (new BufferedReader(new FileReader("PeerInfo.cfg")));
 			while (s.hasNext()) {
 				lPeerID.add(s.nextInt());
 				lHostname.add(s.next());
@@ -112,7 +113,7 @@ class Protocol {
 		
 		/*Read data from Common.cfg*/
 		try {
-			s = new Scanner (new BufferedReader(new FileReader("/home/prakash/workspace/bittorrent/src/Common.cfg")));
+			s = new Scanner (new BufferedReader(new FileReader("Common.cfg")));
 			while (s.hasNext()) {
 				String str = s.next();
 				if ("NumberOfPreferredNeighbors".equals(str)) {
@@ -161,6 +162,9 @@ class Protocol {
 			System.out.println("Peer not found: PeerID" + myPeerID);
 		if (isFileOpen == 1)
 			return;
+
+		//Add the necessary prefix(directory) to the filename
+		String newFileName = dirname + "/" + FileName;
 		if (HaveFile[idx] == 1) {
 			try {
 				/*Open File*/
@@ -178,7 +182,7 @@ class Protocol {
 		} else {
 			FileStatus = false;
 			try {
-				fc = new RandomAccessFile(FileName, "rwd");
+				fc = new RandomAccessFile(newFileName, "rwd");
 				isFileOpen = 1;
 			} catch (IllegalArgumentException  exp) {
 				System.out.println("Excepion:"+exp.getMessage());
