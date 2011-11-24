@@ -21,7 +21,7 @@ public class ConnectionThread implements Runnable{
 	}
 	
 	public void run(){
-
+		prot.logging.debug(prot.myPeerID + " Starting Connection thread");
 		try{
 			int index = 0;
 			int num_pieces = prot.FileSize/prot.PieceSize + 1;
@@ -101,6 +101,8 @@ public class ConnectionThread implements Runnable{
 		}
 		catch(Exception e){
 			e.printStackTrace();
+			prot.logging.debug(peer_id + "Exception in ConnectionThread" + e.getMessage());
 		}
+		prot.logging.debug(peer_id +"Exiting ConnectionThread");
 	}
 }

@@ -19,6 +19,7 @@ public class RecvThread implements Runnable{
 	}
 	
 	public void run(){
+		prot.logging.debug(prot.myPeerID + " Starting Recv thread for node" + peerProcObj.node_array.get(peer_index).PeerID);
 		try{
 			while(true){
 				/*
@@ -39,7 +40,9 @@ public class RecvThread implements Runnable{
 			}
 		}
 		catch(Exception e){
+			prot.logging.debug(prot.myPeerID + "Exception in RecvThread" + e.getMessage());
 			e.printStackTrace();
 		}
+		prot.logging.debug(prot.myPeerID + "Exiting RecvThread, belonging to node" + peerProcObj.node_array.get(peer_index).PeerID);
 	}
 }

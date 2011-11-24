@@ -14,6 +14,7 @@ public class PreferredThread implements Runnable{
 	}
 	
 	public void run(){
+		prot.logging.debug("Starting PrefferedThread");
 		try{
 			
 			while(true){
@@ -90,8 +91,10 @@ public class PreferredThread implements Runnable{
 			}			
 		}
 		catch(Exception e){
+			prot.logging.debug("Exception in PrefferedThread" + e.getMessage());
 			e.printStackTrace();
 		}
+		prot.logging.debug("Exiting PrefferedThread");
 	}
 	
 }

@@ -29,7 +29,8 @@ public class actualPeerProcess {
 		optimisticThread(prot);
 	}
 	
-	public void optimisticThread(Protocol prot){		
+	public void optimisticThread(Protocol prot){
+		prot.logging.debug("Starting OptimisticThread");
 		try{			
 			while(true){
 							
@@ -72,7 +73,9 @@ public class actualPeerProcess {
 			}
 		}
 		catch(Exception e){
+			prot.logging.debug("Exception in OptimisticThread" + e.getMessage());
 			e.printStackTrace();
 		}
+		prot.logging.debug("Exiting OptimisticThread");
 	}
 }

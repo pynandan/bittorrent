@@ -22,6 +22,7 @@ public class SendThread implements Runnable{
 	}
 	
 	public void run(){
+		prot.logging.debug(prot.myPeerID + " Starting Send thread for node" + peerProcObj.node_array.get(peer_index).PeerID);
 		try{
 			while(true){
 				/*
@@ -100,8 +101,10 @@ public class SendThread implements Runnable{
 			}
 		}
 		catch(Exception e){
+			prot.logging.debug(prot.myPeerID + "Exception in SendThread" + e.getMessage());
 			e.printStackTrace();
-		}		
+		}
+		prot.logging.debug(prot.myPeerID + "Exiting SendThread belonging to node" + peerProcObj.node_array.get(peer_index).PeerID);
 	}
 	
 	
