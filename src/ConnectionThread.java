@@ -24,8 +24,6 @@ public class ConnectionThread implements Runnable{
 		prot.logging.debug(prot.myPeerID + " Starting Connection thread");
 		try{
 			int index = 0;
-			int num_pieces = prot.FileSize/prot.PieceSize + 1;
-			int bitfield_size = num_pieces/8 + 1;
 			
 			//connect with the previously started peers
 			for(int i = 0; i < prot.NumPeers; i++){

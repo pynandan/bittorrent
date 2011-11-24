@@ -32,6 +32,9 @@ public class actualPeerProcess {
 	public void optimisticThread(Protocol prot){
 		prot.logging.debug("Starting OptimisticThread");
 		try{			
+			while (prot.NumPeers != node_array.size())
+				Thread.currentThread().sleep(prot.OptInterval*1000);
+				
 			while(true){
 							
 				ArrayList<Integer> index_array = new ArrayList<Integer>();				
