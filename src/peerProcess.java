@@ -1,8 +1,9 @@
+import java.io.*;
 import java.util.*;
 
 public class peerProcess{
 	
-	public static int main(String[] args){
+	public static void main(String[] args){
 		int myPeerID;
 		actualPeerProcess pp;
 		
@@ -10,11 +11,11 @@ public class peerProcess{
 			myPeerID = Integer.parseInt(args[0]);
 		} catch (NumberFormatException exp){
 			System.out.println("Exception converting string in main" + exp.getMessage());
-			return -1;
+			return;
 		}
 		
 		pp = new actualPeerProcess(myPeerID);
-		return 0;
+		return;
 	}
 	
 ///////////////////////////////////////////////////////////////////////////	
