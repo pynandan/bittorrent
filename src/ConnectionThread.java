@@ -37,23 +37,23 @@ public class ConnectionThread implements Runnable{
 				node peer_node = new node(prot, node_array);
 				peer_node.socket = client_socket;
 								
-				peer_node.pw = new PrintWriter(client_socket.getOutputStream(), true);
-	            peer_node.br = new BufferedReader(new InputStreamReader(client_socket.getInputStream()));
+				peer_node.out = new DataOutputStream(client_socket.getOutputStream());
+	            peer_node.in = new DataInputStream(client_socket.getInputStream());
 	            
 	            //send handshake
 	            byte[] msg = prot.getHandshake(peer_id);
-	            peer_node.pw.println(msg);
+	            peer_node.out.write(msg);
 	            //get handshake from the other peer
-	            String str_msg = peer_node.br.readLine();
-	            msg = str_msg.getBytes();	            
+	            msg = new byte[32];
+	            peer_node.readData(msg);            
 	            peer_node.PeerID = prot.verifyHandshake(msg, true);
 	            
 	            //send bitfield msg
 	            msg = prot.getBitfield();
-	            peer_node.pw.println(msg);
+	            peer_node.out.write(msg);
 	            //get bitfield msg
-	            str_msg = peer_node.br.readLine();
-	            prot.processMessage(str_msg.getBytes(), peer_node);
+	            msg = peer_node.getPacket();
+	            prot.processMessage(msg, peer_node);
 	            				
 				node_array.add(peer_node);
 				//this is location of the peer in the node_array in this machine
@@ -71,23 +71,25 @@ public class ConnectionThread implements Runnable{
 				node peer_node = new node(prot, node_array);
 				peer_node.socket = client_socket;
 				
-				peer_node.pw = new PrintWriter(client_socket.getOutputStream(), true);
-	            peer_node.br = new BufferedReader(new InputStreamReader(client_socket.getInputStream()));
+				peer_node.out = new DataOutputStream(client_socket.getOutputStream());
+	            peer_node.in = new DataInputStream(client_socket.getInputStream());
 	            
 	            //get the handshake msg
-	            String str_msg = peer_node.br.readLine();
-	            byte[] msg = str_msg.getBytes();
+	            byte[] msg = new byte[32];
+	            peer_node.readData(msg);
+	            
 	            peer_node.PeerID = prot.verifyHandshake(msg, false);
 	            //send handshake msg to the other peer
 	            msg = prot.getHandshake(peer_id);
-	            peer_node.pw.println(msg);
+	            peer_node.out.write(msg);
 	            
 	            //get bitfield msg
-	            str_msg = peer_node.br.readLine();
-	            prot.processMessage(str_msg.getBytes(), peer_node);
+	            msg = peer_node.getPacket();
+	            prot.processMessage(msg, peer_node);
+	            
 	            //send bitfield msg to the other peer
 	            msg = prot.getBitfield();
-	            peer_node.pw.println(msg);
+	            peer_node.out.write(msg);
 	            
 	            node_array.add(peer_node);
 	            //this is location of the peer in the node_array in this machine

@@ -57,27 +57,27 @@ public class SendThread implements Runnable{
 								msg = prot.getUnchoke(temp_node);
 							temp_node.send_choke_msg = false;
 							if(msg != null)
-								temp_node.pw.println(msg);
+								temp_node.out.write(msg);
 						}
 						//have message, **SET request_piece_id to -1 only in Sender Thread
 						if(temp_node.send_have_msg == true){
 							msg = prot.getHave(temp_node); 
 							temp_node.send_have_msg = false;
 							if(msg != null)
-								temp_node.pw.println(msg);
+								temp_node.out.write(msg);
 						}
 						//interested message
 						if(temp_node.send_interested_msg == true){
 							msg = prot.getInterested(temp_node);
 							temp_node.send_interested_msg = false;
 							if(msg != null)
-								temp_node.pw.println(msg);
+								temp_node.out.write(msg);
 						}
 						if(temp_node.send_piece_msg == true){
 							msg = prot.getPiece(temp_node.RequestpieceID); //tODO: CHECK THIS with above todo marked
 							temp_node.send_piece_msg = false;
 							if(msg != null)
-								temp_node.pw.println(msg);
+								temp_node.out.write(msg);
 						}
 						//if our state is unchoked send a request (#PP)
 						if (temp_node.send_request_msg == true && 
@@ -86,7 +86,7 @@ public class SendThread implements Runnable{
 
 							msg = prot.getRequest();
 							if(msg != null)
-								temp_node.pw.println(msg);
+								temp_node.out.write(msg);
 
 							if (prot.FileStatus == false) {
 								 temp_node.send_request_msg = false; // Wait till it is set to true by protocol

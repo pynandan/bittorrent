@@ -27,8 +27,8 @@ public class node {
 	boolean send_piece_msg;			//We need to send a Piece message
 	boolean send_request_msg;
 	
-	PrintWriter pw;
-	BufferedReader br;
+	DataOutputStream out;
+	DataInputStream in;
 	
 	node(Protocol prot, ArrayList<node> Array) {
 		
@@ -96,5 +96,44 @@ public class node {
 				//}
 			}
 		}
+	}
+	
+	public void readData(byte[] data) {
+		int dataRead =0, cnt;
+		try{
+			while (dataRead < data.length) {
+				if ((cnt = in.read(data, dataRead, data.length-dataRead)) < 0 ) {
+					Prot.logging.debug("readDate: error while reading");
+				}
+				dataRead = dataRead + cnt; 
+			}
+		}catch (Exception ex) {
+			Prot.logging.debug("Exception" + ex.getMessage());
+		}
+	}
+	
+	public void readData(byte[] data, int off, int len) {
+		int dataRead =0, cnt;
+		try{
+			while (dataRead < len) {
+				if ((cnt = in.read(data, dataRead+off, data.length-dataRead)) < 0 ) {
+					Prot.logging.debug("readDate: error while reading");
+				}
+				dataRead = dataRead + cnt; 
+			}
+		}catch (Exception ex) {
+			Prot.logging.debug("Exception" + ex.getMessage());
+		}
+	}	
+	
+	public byte[] getPacket() {
+		 byte[] msg = new byte[4];
+         readData(msg);
+         int msglen = Prot.ByteToInt(msg, 0);
+         
+         byte[] retBuf = new byte[msglen+4];
+         System.arraycopy(msg, 0, retBuf, 0 , msg.length);
+         readData(retBuf, 4, msglen);
+         return retBuf;
 	}
 }
