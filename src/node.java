@@ -9,13 +9,13 @@ public class node {
 	
 	int PeerID;
 	boolean bitField[];
-	boolean Chokestatus;			//true-> chocked, false->unchocked, have we choked the peer? (Sent by peer to us)
+	boolean Chokestatus;			//true-> chocked, false->unchocked,  (Sent by peer to us)
 	boolean InterestStatus;			//true-> interested, does the told us that it is interested in us? (Sent by peer to us)
 
 	int DownloadRate; 				/*Number of pieces received in unchoking interval, 
 									 *will be set to zero before the beginning of each unchoking interval*/
 	boolean PeerInterestStatus;		// (Sent by us to Peer) Our interest status in the Peer (as stored by InterestStatus in other Peer) / Was out last message to this INTERESTED or NOT INTERESTED
-	boolean PeerChokeStatus;		// (Sent by us to peer) Does this particular peer has chocked us?
+	boolean PeerChokeStatus;		// (Sent by us to peer) 
 	
 	int RequestpieceID; 			//Stores the request piece ID. (pieceID as requested by peer) So when REQUEST packet is got from peer
 	boolean ChokeMessageType;		//This value is used by sender thread when send_choke_msg is set (will be set by optimistic or preferred thread)
@@ -137,7 +137,7 @@ public class node {
          byte[] retBuf = new byte[msglen+4];
          System.arraycopy(msg, 0, retBuf, 0 , msg.length);
          readData(retBuf, 4, msglen);
-         Prot.logging.debug("Happy!! Got a packet");
+         Prot.logging.debug("Happy!! Got a packet: " + retBuf[4]);
          return retBuf;
 	}
 }

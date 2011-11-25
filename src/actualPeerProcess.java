@@ -59,7 +59,7 @@ public class actualPeerProcess {
 						//hence the following condition, 
 						// BE IN THE LOOP TILL THE NODE HAS THE FOLLOWING STATUS
 						//		MESSAGE TYPE IS CHOKE 		&& 		NOT INTERESTED
-						while(opt_node.ChokeMessageType == true && opt_node.InterestStatus == false){
+						while(opt_node.PeerChokeStatus == true && opt_node.InterestStatus == false){
 							random_peer_index = r.nextInt(index_array.size()-1);
 							opt_node = node_array.get(random_peer_index);
 						}
@@ -69,8 +69,9 @@ public class actualPeerProcess {
 						//choke message type = UNCHOKE
 						opt_node.ChokeMessageType = false;
 					}
-				prot.logging.log("Peer [" + Integer.toString(prot.myPeerID) + "] has optimistically unchoked neighbor " 
-						+ Integer.toString(opt_node.PeerID));
+					prot.logging.log("Peer [" + Integer.toString(prot.myPeerID) + "] has optimistically unchoked neighbor " 
+							+ Integer.toString(opt_node.PeerID));
+					sharedObj.notifyAll();
 				}
 				Thread.currentThread().sleep(prot.OptInterval*1000);
 			}

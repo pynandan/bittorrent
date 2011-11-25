@@ -91,8 +91,8 @@ public class PreferredThread implements Runnable{
 							peerProcObj.node_array.get(i).send_choke_msg = false;
 						}
 					}
+					peerProcObj.sharedObj.notifyAll();
 				}
-				
 				pref_thread.sleep(prot.Interval*1000);
 			}			
 		}
