@@ -69,10 +69,9 @@ public class actualPeerProcess {
 						//choke message type = UNCHOKE
 						opt_node.ChokeMessageType = false;
 					}
-				}
 				prot.logging.log("Peer [" + Integer.toString(prot.myPeerID) + "] has optimistically unchoked neighbor " 
 						+ Integer.toString(opt_node.PeerID));
-				
+				}
 				Thread.currentThread().sleep(prot.OptInterval*1000);
 			}
 		}
