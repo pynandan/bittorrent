@@ -108,7 +108,7 @@ public class node {
 				dataRead = dataRead + cnt; 
 			}
 		}catch (Exception ex) {
-			Prot.logging.debug("Exception" + ex.getMessage());
+			Prot.logging.debug("Exception: readdata" + ex.getMessage());
 		}
 	}
 	
@@ -116,13 +116,13 @@ public class node {
 		int dataRead =0, cnt;
 		try{
 			while (dataRead < len) {
-				if ((cnt = in.read(data, dataRead+off, data.length-dataRead)) < 0 ) {
-					Prot.logging.debug("readDate: error while reading");
+				if ((cnt = in.read(data, dataRead+off, len-dataRead)) < 0 ) {
+					Prot.logging.debug("readData: error while reading");
 				}
 				dataRead = dataRead + cnt; 
 			}
 		}catch (Exception ex) {
-			Prot.logging.debug("Exception" + ex.getMessage());
+			Prot.logging.debug("Exception: readdata with off" + ex.getMessage());
 		}
 	}	
 	

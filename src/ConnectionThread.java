@@ -64,8 +64,8 @@ public class ConnectionThread implements Runnable{
 			}
 
 			//accept connections from other peers
+			ServerSocket server_socket = new ServerSocket(prot.Ports[index]);
 			while(true){
-				ServerSocket server_socket = new ServerSocket(prot.Ports[index]);
 				Socket client_socket = server_socket.accept();
 				
 				node peer_node = new node(prot, node_array);
