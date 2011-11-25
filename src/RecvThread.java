@@ -31,11 +31,9 @@ public class RecvThread implements Runnable{
 				/*String recv_str = peerProcObj.node_array.get(peer_index).br.readLine();	//since recieve is blocking, 
 																	//this line should be outside the synchronized loop*/
 				synchronized(peerProcObj.sharedObj){
-					synchronized(peerProcObj.node_array.get(peer_index)){
-						int ret_val = prot.processMessage(packet, peerProcObj.node_array.get(peer_index));
-						if(ret_val > 0){
-							peerProcObj.node_array.get(peer_index).notifyAll();
-						}
+					int ret_val = prot.processMessage(packet, peerProcObj.node_array.get(peer_index));
+					if(ret_val > 0){
+						peerProcObj.node_array.get(peer_index).notifyAll();
 					}
 				}
 			}
