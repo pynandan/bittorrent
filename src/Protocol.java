@@ -285,8 +285,9 @@ class Protocol {
 	}
 	
 	public int ByteToInt(byte[] buf, int offset) {
-		return (int)buf[offset] + (int)(buf[offset+1] << 8) +
-			(int)(buf[offset+2] << 16) + (int)(buf[offset+3] << 24);
+		 int num = ((int)buf[offset] & 0xFF )+ ((int)(buf[offset+1] << 8)& 0xFF00 ) + ((int)(buf[offset+2] << 16) & 0xFF0000 )+ 
+		 		((int)(buf[offset+3] << 24) & 0xFF000000 );
+		 return num;
 	}
 	
 	/*
@@ -300,6 +301,16 @@ class Protocol {
 		return Handshake;
 	}
 	
+    private boolean is_equals(byte[] header,byte[] hdr) {
+    	if (header.length !=  hdr.length) {
+                    return false;
+            }
+            for (int i=0; i< header.length;	i++)
+		if (header[i] != hdr[i])
+                            return false;
+            return true;
+    }
+	
 	/*
 	 *Verifies header and returns PeerID in the Handshake 
 	 *
@@ -311,7 +322,7 @@ class Protocol {
 		byte hdr[] = new byte[header.length];
 		
 		System.arraycopy(Handshake, 0, hdr, 0, header.length);
-		if (hdr.equals(header) == false) {
+		if (is_equals(hdr, header) == false) {
 			logging.debug("Wrong Header");
 			return PeerID;
 		}
@@ -319,10 +330,10 @@ class Protocol {
 		
 		if (to) {
 			logging.log("Peer [" + Integer.toString(myPeerID) + 
-					"] makes a connection to Peer [" + Integer.toString(PeerID) + "]");
+					"] makes a connection to Peer [" + PeerID + "]");
 		} else {
 			logging.log("Peer [" + Integer.toString(myPeerID) + 
-					"] is connected from Peer [" + Integer.toString(PeerID) + "]");
+					"] is connected from Peer [" + PeerID + "]");
 		}
 		return PeerID;
 	}
