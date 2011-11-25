@@ -527,6 +527,8 @@ class Protocol {
 			break;
 		case BITFIELD:
 			nd.UpdateBitField(packet,5);
+			logging.log("Peer [" + Integer.toString(myPeerID) + "] received the bitField message from " 
+					+ Integer.toString(nd.PeerID));
 			retVal=2;	//We might have to send a interested message 
 			break;
 		case REQUEST: {

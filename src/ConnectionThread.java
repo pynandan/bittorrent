@@ -51,9 +51,12 @@ public class ConnectionThread implements Runnable{
 	            //send bitfield msg
 	            msg = prot.getBitfield();
 	            peer_node.out.write(msg);
-	            //get bitfield msg
+	            /*//get bitfield msg
 	            msg = peer_node.getPacket();
-	            prot.processMessage(msg, peer_node);
+	            int ret_val = prot.processMessage(msg, peer_node);
+	            if(ret_val > 0){
+					peerProcObj.sharedObj.notifyAll();
+				}*/
 	            				
 				node_array.add(peer_node);
 				//this is location of the peer in the node_array in this machine
@@ -83,9 +86,9 @@ public class ConnectionThread implements Runnable{
 	            msg = prot.getHandshake(peer_id);
 	            peer_node.out.write(msg);
 	            
-	            //get bitfield msg
+	            /*//get bitfield msg
 	            msg = peer_node.getPacket();
-	            prot.processMessage(msg, peer_node);
+	            prot.processMessage(msg, peer_node);*/
 	            
 	            //send bitfield msg to the other peer
 	            msg = prot.getBitfield();

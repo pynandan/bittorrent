@@ -80,7 +80,7 @@ public class PreferredThread implements Runnable{
 						//check the preferred list for the presence of this node
 						boolean found = false;
 						for(int j = 0; j < prot.NumPN; j++){
-							if(preferred_list[i] !=null && peerProcObj.node_array.get(i).PeerID == preferred_list[j].PeerID){
+							if((preferred_list[j] !=null) && peerProcObj.node_array.get(i).PeerID == preferred_list[j].PeerID){
 								found = true;
 								break;
 							}
