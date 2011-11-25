@@ -137,6 +137,7 @@ public class node {
          byte[] retBuf = new byte[msglen+4];
          System.arraycopy(msg, 0, retBuf, 0 , msg.length);
          readData(retBuf, 4, msglen);
+         Prot.logging.debug("Happy!! Got a packet");
          return retBuf;
 	}
 }

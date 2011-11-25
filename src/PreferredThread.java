@@ -66,7 +66,7 @@ public class PreferredThread implements Runnable{
 						 * If in the previous cycle, this node's status is unchoked, and again if it was selected in 
 						 * the preferred list, dont set the send_choke_msg since it is not needed as specified in the specifications
 						 */
-						if(preferred_list[i].ChokeMessageType == true){
+						if(preferred_list[i] !=null && preferred_list[i].ChokeMessageType == true){
 							preferred_list[i].send_choke_msg = true;
 							preferred_list[i].ChokeMessageType = false;
 						}
@@ -80,7 +80,7 @@ public class PreferredThread implements Runnable{
 						//check the preferred list for the presence of this node
 						boolean found = false;
 						for(int j = 0; j < prot.NumPN; j++){
-							if(peerProcObj.node_array.get(i).PeerID == preferred_list[j].PeerID){
+							if(preferred_list[i] !=null && peerProcObj.node_array.get(i).PeerID == preferred_list[j].PeerID){
 								found = true;
 								break;
 							}

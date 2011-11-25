@@ -31,7 +31,7 @@ public class SendThread implements Runnable{
 				 */
 				
 				synchronized(peerProcObj.sharedObj){
-					peerProcObj.node_array.get(peer_index).wait();	//wait till recvThread OR preferredThread OR optimisticThread to notifies you
+					peerProcObj.sharedObj.wait();	//wait till recvThread OR preferredThread OR optimisticThread to notifies you
 					
 					node temp_node = peerProcObj.node_array.get(peer_index);
 					byte[] msg = null;
