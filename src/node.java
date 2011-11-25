@@ -103,9 +103,12 @@ public class node {
 		try{
 			while (dataRead < data.length) {
 				if ((cnt = in.read(data, dataRead, data.length-dataRead)) < 0 ) {
-					Prot.logging.debug("readDate: error while reading");
+					Prot.logging.debug("readData: error while reading");
+					Thread.currentThread().yield();
+				} 
+				else {
+					dataRead = dataRead + cnt;
 				}
-				dataRead = dataRead + cnt; 
 			}
 		}catch (Exception ex) {
 			Prot.logging.debug("Exception: readdata" + ex.getMessage());

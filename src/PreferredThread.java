@@ -18,8 +18,10 @@ public class PreferredThread implements Runnable{
 		
 		try{
 			/*TODO: WORKAROUND: till we figure out a clean way of choosing among partial nodes*/
-			while(peerProcObj.node_array.size() != prot.NumPeers)
+			while(peerProcObj.node_array.size() != (prot.NumPeers-1))
 				pref_thread.sleep(prot.Interval*1000);
+			
+			prot.logging.debug("Exec of PrefferedThread started");
 			
 			while(true){
 				node preferred_list[] = new node[prot.NumPN]; //consists of the peer ids of the preferred neighbors chosen in this cycle

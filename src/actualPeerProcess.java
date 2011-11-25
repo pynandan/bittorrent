@@ -32,13 +32,13 @@ public class actualPeerProcess {
 	public void optimisticThread(Protocol prot){
 		prot.logging.debug("Starting OptimisticThread");
 		try{			
-			while (prot.NumPeers != node_array.size())
+			while ((prot.NumPeers-1) != node_array.size())
 				Thread.currentThread().sleep(prot.OptInterval*1000);
 				
 			while(true){
 							
 				ArrayList<Integer> index_array = new ArrayList<Integer>();				
-				for(int i = 0; i < prot.NumPeers; i++){
+				for(int i = 0; i < (prot.NumPeers-1); i++){
 					if(node_array.get(i).PeerID != prot.myPeerID)
 						index_array.add(i);
 				}				
