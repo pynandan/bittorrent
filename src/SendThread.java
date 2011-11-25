@@ -98,6 +98,7 @@ public class SendThread implements Runnable{
 						//just to be safe, check for null message and then send the message
 					}
 				}
+				Thread.currentThread().yield();
 			}
 		}
 		catch(Exception e){
