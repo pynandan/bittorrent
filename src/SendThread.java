@@ -60,10 +60,12 @@ public class SendThread implements Runnable{
 					}
 					//have message, **SET request_piece_id to -1 only in Sender Thread
 					if(temp_node.send_have_msg == true){
-						msg = prot.getHave(temp_node); 
+						while (temp_node.lastReceivedPieceID.size() > 0 ){
+							msg = prot.getHave(temp_node); 
+							if(msg != null)
+								temp_node.out.write(msg);
+						}
 						temp_node.send_have_msg = false;
-						if(msg != null)
-							temp_node.out.write(msg);
 					}
 					//interested message
 					if(temp_node.send_interested_msg == true){

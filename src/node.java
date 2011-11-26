@@ -20,14 +20,14 @@ public class node {
 	volatile int RequestpieceID; 			//Stores the request piece ID. (pieceID as requested by peer) So when REQUEST packet is got from peer 
 	volatile boolean PendingRequests;//(will be set to true if there are pending requests)
 	volatile boolean ChokeMessageType;		//This value is used by sender thread when send_choke_msg is set (will be set by optimistic or preferred thread)
-	volatile int lastReceivedPieceID;
-	
 	volatile boolean send_choke_msg;			//Should we send a choke message (will be set by optimistic or preferred thread)			
 	volatile boolean send_have_msg; 			//After we received a piece, send have message to all the other nodes, that don't have that piece
 	volatile boolean send_interested_msg;	//After we received a have message or bitfield, send a Interested message, if we are interested.
 	volatile boolean send_piece_msg;			//We need to send a Piece message
 	volatile boolean send_request_msg;
 	volatile boolean send_not_interested_msg; //after we receive the complete file, send the not interested msg	
+
+	ArrayList<Integer> lastReceivedPieceID;
 
 	DataOutputStream out;
 	DataInputStream in;
@@ -57,6 +57,7 @@ public class node {
 		PeerID = -1;
 		Prot = prot;
 		NodeArray = Array;
+		lastReceivedPieceID = new ArrayList<Integer>();
 	}
 	
 	public void UpdateBitField(int pieceIndex, Protocol prot){
@@ -93,18 +94,21 @@ public class node {
 		
 		while (nodeIter.hasNext()) {
 			node tmp=nodeIter.next();
-			if (tmp.PeerID == Prot.myPeerID || tmp.PeerID == -1){
-				continue;
-			}
-			else {
-				//if (bitField[pieceIndex] == false) { //Why commented? To maintain consistant bitField across peers
-				tmp.send_have_msg = true;
-				tmp.lastReceivedPieceID = pieceIndex;	//this is required while sending have message
-				//}
-			}
+			tmp.send_have_msg = true;
+			tmp.lastReceivedPieceID.add(pieceIndex);	//this is required while sending have message
 		}
 	}
 	
+	public void notifyNotInterested(){
+		Iterator<node> nodeIter = NodeArray.iterator();
+		
+		while (nodeIter.hasNext()) {
+			node tmp=nodeIter.next();
+			tmp.send_not_interested_msg = true;
+		}
+	}
+
+
 	public void readData(byte[] data) {
 		int dataRead =0, cnt;
 		try{

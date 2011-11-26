@@ -23,6 +23,7 @@ class Protocol {
 	int curPieces;
 	boolean bitField[];
 	boolean requestBitField[];
+	int countNotInterested;
 //File read write API's
 	static private RandomAccessFile fc;
 	static private int isFileOpen=0;
@@ -85,7 +86,7 @@ class Protocol {
 		int i; 
 		
 		myPeerID = myID;
-		
+		countNotInterested = 0;
 		//Initialize logging
 		logging =new writeLog(myPeerID);
 		
@@ -387,7 +388,7 @@ class Protocol {
 		byte[] Msg = new byte[MSGLEN + MsgLen]; 
 		IntToByte(MsgLen,Msg,0);				//Message Length
 		Msg[4] = HAVE;							//Message Type
-		IntToByte(nd.lastReceivedPieceID, Msg, MSGLEN+1);	//Message Payload
+		IntToByte(nd.lastReceivedPieceID.remove(0), Msg, MSGLEN+1);	//Message Payload
 		logging.debug("Sending Have");
 		return Msg;
 	}
@@ -473,7 +474,9 @@ class Protocol {
 			}
 			if (nd.PendingRequests == true) {
 				return null;
-			}
+			} else
+				nd.PendingRequests = true;
+
 			/* try again if:
 			 *  the chunk is already present
 			 *  the chunk is slaready reqquested
@@ -535,7 +538,7 @@ class Protocol {
 		byte[] Piece = readPiece(pieceIndex);	//Read Piece	
 		// (Msg Length)0-3  (Msg Type)4  (Piece Index)5-8	(Piece data) 9-X
 		System.arraycopy(Piece, 0, Msg, 9, PieceSize); // Payload b. Piece data 
-		logging.log("Sending Piece");
+		logging.log("Sending Piece: " + pieceIndex);
 		return Msg;
 	}
 
@@ -553,7 +556,7 @@ class Protocol {
 			break;
 		case UNCHOKE:
 			nd.Chokestatus = false; 
-			if ( nd.send_request_msg == true ) {
+			if ( nd.send_request_msg == true || nd.PendingRequests == true) {
 				retVal = 0;
 			} 
 			else {
@@ -573,13 +576,14 @@ class Protocol {
 			break;
 		case NOTINTERESTED:
 			nd.InterestStatus = false;
+			countNotInterested++;
 			logging.log("Peer [" + Integer.toString(myPeerID) + "] received the not interested message from " 
 					+ Integer.toString(nd.PeerID));
 			break;
 		case HAVE:
 			nd.UpdateBitField(ByteToInt(packet,5), this);
 			logging.log("Peer [" + Integer.toString(myPeerID) + "] received the have message from " 
-					+ Integer.toString(nd.PeerID) + "for piece " + ByteToInt(packet,5));
+					+ Integer.toString(nd.PeerID) + " for piece " + ByteToInt(packet,5));
 			retVal=1;	//We might have to send a interested message
 			break;
 		case BITFIELD:
@@ -589,13 +593,14 @@ class Protocol {
 			retVal=2;	//We might have to send a interested message 
 			break;
 		case REQUEST: {
-			if (nd.send_piece_msg == true) {
-				logging.log("Request received even before servicing the old request");
-			}
 			if (nd.PeerChokeStatus == true) {
 				logging.debug("GOTCHA!!! - You are not supposed to send a piece request, you have been choked, still we will send you a piece in a peaceful manner");
 			}
 			nd.RequestpieceID = ByteToInt(packet, 5);
+			if (nd.send_piece_msg == true) {
+				logging.log("Request received even before servicing the old request from " + nd.PeerID + " for " + nd.RequestpieceID);
+			}
+
 			nd.send_piece_msg = true;
 			logging.log("Peer [" + myPeerID + "] has received a request for piece " + nd.RequestpieceID  + " from " 
 				    + nd.PeerID);
@@ -614,18 +619,20 @@ class Protocol {
 			UpdateBitField(pieceIndex);		
 			nd.notifyHaveMsg(pieceIndex);
 			retVal=4;
+		
 			if (nd.RequestpieceID == pieceIndex) {
-				nd.PendingRequests = false;
-			} 
-			else {
 				logging.log ("Received a different piece than requested");
 			}
+			nd.PendingRequests = false;
+
 			if (curPieces == NumPieces) {
-				nd.send_not_interested_msg = true;
+				nd.notifyNotInterested();
+				nd.send_not_interested_msg=true;
 				FileStatus = true;	//Indicate that the file is complete
 			}
 			else {
-				nd.send_request_msg=true;
+				if (nd.Chokestatus == false)
+					nd.send_request_msg=true;
 			}
 			break;
 		default:

@@ -21,6 +21,10 @@ public class PreferredThread implements Runnable{
 			while(peerProcObj.node_array.size() != (prot.NumPeers-1))
 				pref_thread.sleep(prot.Interval*1000);
 			
+			//Tell others we are not interested in their data
+			if (prot.FileStatus == true)
+				peerProcObj.node_array.get(0).notifyNotInterested();
+
 			prot.logging.debug("Exec of PrefferedThread started");
 			
 			while(true){

@@ -36,6 +36,20 @@ public class actualPeerProcess {
 				Thread.currentThread().sleep(prot.OptInterval*1000);
 				
 			while(true){
+				//if we have received NumPeers-1 not interested messages exit!!
+				while (prot.countNotInterested == prot.NumPeers -1  && prot.FileStatus == true) {
+					int flag = 1;
+					for (int i =0 ; i< (prot.NumPeers -1); i++)
+						if (node_array.get(i).send_not_interested_msg == true) {
+							flag = 0;
+							break;
+						}
+					if (flag != 0) {
+						prot.logging.log ("Bye bye");
+						System.exit(0);
+					}
+					Thread.currentThread().sleep(100);
+				}
 				synchronized (sharedObj) {			
 					ArrayList<Integer> index_array = new ArrayList<Integer>();				
 					for(int i = 0; i < (prot.NumPeers-1); i++){
