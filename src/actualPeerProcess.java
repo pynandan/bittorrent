@@ -45,6 +45,7 @@ public class actualPeerProcess {
 							break;
 						}
 					if (flag != 0) {
+						prot.fc.close();
 						prot.logging.log ("Bye bye");
 						System.exit(0);
 					}

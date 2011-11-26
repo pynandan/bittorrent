@@ -25,7 +25,7 @@ class Protocol {
 	boolean requestBitField[];
 	int countNotInterested;
 //File read write API's
-	static private RandomAccessFile fc;
+	static RandomAccessFile fc;
 	static private int isFileOpen=0;
 	writeLog logging;
 	
@@ -610,6 +610,7 @@ class Protocol {
 		case PIECE:
 			byte[] pieceData = new byte[PieceSize];
 			int pieceIndex = ByteToInt(packet, 5);
+			System.arraycopy(packet, 9, pieceData, 0, PieceSize);
 			if (writePiece(pieceIndex, pieceData) < 0) {
 				System.out.println("Error Writing piece " + pieceIndex);
 			}
