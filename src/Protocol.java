@@ -70,7 +70,7 @@ class Protocol {
 		}
 		
 		void debug(String str) {
-			log("Debug: " + str);
+			//	log("Debug: " + str);
 		}
 		
 	}
@@ -151,6 +151,7 @@ class Protocol {
 				s.close();
 			}
 		}
+		logging.log ("NumPieces = " + NumPieces);
 		bitField = new boolean[NumPieces];
 		requestBitField = new boolean[NumPieces];
 	}
@@ -191,6 +192,10 @@ class Protocol {
 				isFileOpen = 1;
 			} catch (Exception  exp) {
 				logging.debug("Excepion:"+exp.getMessage());
+			}
+			for(i=0 ; i < bitField.length ;i++){
+				bitField[i] = false;
+				requestBitField[i] = false;
 			}
 			/*Allocate file length*/
 			try {
@@ -383,6 +388,7 @@ class Protocol {
 		IntToByte(MsgLen,Msg,0);				//Message Length
 		Msg[4] = HAVE;							//Message Type
 		IntToByte(nd.lastReceivedPieceID, Msg, MSGLEN+1);	//Message Payload
+		logging.debug("Sending Have");
 		return Msg;
 	}
 	
@@ -391,10 +397,10 @@ class Protocol {
 	 */
 	public byte[] generateBitfield (boolean bitField[]) {
 		byte retBuf[] = new byte[bitField.length/8 + 1];
-		byte mask=(byte)0x80;
+		int mask=0x80;
 		for (int i=0 ; i<bitField.length ; i++) {
 			if (bitField[i] == true) {
-				retBuf[i/8]= (byte)((int)retBuf[i/8] ^ (int)(mask >>> (i%8)));
+				retBuf[i/8]= (byte)(retBuf[i/8] ^ ((byte)(mask >>> (i%8))));
 			}
 		}
 		return retBuf;
@@ -410,6 +416,21 @@ class Protocol {
 		return Msg;
 	}
 	
+	//Thsi function will be used only to search for a chunck in getRequest
+	private int CheckForCompletion(int start) {
+		for (int i=start; i<NumPieces ; i++) {
+			if (bitField[i] == true) {
+				continue;
+			} 
+			else{
+				if (requestBitField[i] == false) {
+					return i;
+				}
+			}
+		}
+		return -1;
+	}
+
 	//If it returns -1 it means it is complete
 	private int CheckForCompletion() {
 		for (int i=0; i<NumPieces ; i++) {
@@ -422,7 +443,6 @@ class Protocol {
 				}
 			}
 		}
-		FileStatus = true;	//Indicate that the file is complete
 		return -1;
 	}
 	 
@@ -431,35 +451,64 @@ class Protocol {
 	 * It is expected that the user of this routine checks the file status before and after the function call
 	 * THE RETURNED PACKET IS ""VALID"" IF AND ONLY IF, FileStatus IS ""FALSE"" 
 	 */
-	public byte[] getRequest() {
+	public byte[] getRequest(node nd) {
 		int MsgLen = 1 + 4;
 		byte[]Msg = new byte[MSGLEN + MsgLen];
 		Random gen = new Random();
-		int rand = gen.nextInt() % NumPieces;
+		int rand = gen.nextInt(NumPieces);
 		int count=0;
+		//logging.debug("Entering getRequest");
 		while (true) {
 			if (FileStatus == true) {
 				logging.debug("Oh my god ..file is complete why on earth you need a request packet" +
 						"Send him a dummy packet and hope he checks the FileStatus");
-				break;
+				return null;
 			}
 			if (curPieces == NumPieces) {
 				int res = CheckForCompletion();
 				if (res == -1) {
 					logging.log("Peer [" + Integer.toString(myPeerID) + "] has downloaded the complete file");
-					break;
+					return null;
 				}
 			}
-			while (bitField[rand]== true || ( bitField[rand]== false && requestBitField[rand]==true )) {
-				rand = gen.nextInt() % NumPieces;
+			if (nd.PendingRequests == true) {
+				return null;
+			}
+			/* try again if:
+			 *  the chunk is already present
+			 *  the chunk is slaready reqquested
+			 *  is not avialable at the node to which we are sending the request
+			 */
+			while (bitField[rand] == true || ( bitField[rand]== false && requestBitField[rand]==true ) || nd.bitField[rand] == false) {
+				rand = gen.nextInt(NumPieces);
 				count++;
-				if (count == NumPieces) {
+				if (count == NumPieces/4) {
 					rand = CheckForCompletion();
-					break;
+					if (rand == -1) {
+						logging.debug("File complete");
+						return null;//We have complete file
+					}
+					else {
+						while (rand != -1 && nd.bitField[rand] == false)
+							rand = CheckForCompletion(rand+1); //try again
+						if (rand == -1) {
+							logging.debug(myPeerID + " No valid Request possible on node " + nd.PeerID);
+							return null; // no valid request is possible
+						}
+						else
+							break;
+					}
 				}
+			}
+			if (requestBitField[rand] == false && bitField[rand] == false && nd.bitField[rand]==true) {
+				requestBitField[rand] = true;
+				break;
+			} 
+			else {
+				logging.debug ("Check getRequest Control should never come here");
 			}
 			/*Take lock and set the bit*/
-			synchronized(requestBitField) {	
+			/*synchronized(requestBitField) {	
 				if (requestBitField[rand] == false && bitField[rand] == true) {
 					requestBitField[rand] = true;
 					break;
@@ -467,11 +516,12 @@ class Protocol {
 				else {
 					continue;	//Oops someone modified it..it is alright continue
 				}
-			}
+				}*/
 		}
 		IntToByte(MsgLen,Msg,0);			//Write Messaage Length
 		Msg[4] = REQUEST;					//Message Type
 		IntToByte(rand, Msg, MSGLEN+1);		//Payload
+		logging.log("Sending Request" + rand);
 		return Msg;
 	}
 	
@@ -485,6 +535,7 @@ class Protocol {
 		byte[] Piece = readPiece(pieceIndex);	//Read Piece	
 		// (Msg Length)0-3  (Msg Type)4  (Piece Index)5-8	(Piece data) 9-X
 		System.arraycopy(Piece, 0, Msg, 9, PieceSize); // Payload b. Piece data 
+		logging.log("Sending Piece");
 		return Msg;
 	}
 
@@ -502,12 +553,18 @@ class Protocol {
 			break;
 		case UNCHOKE:
 			nd.Chokestatus = false; 
-			nd.send_request_msg=true;/* We cannot set a boolean every time a request should be sent.
+			if ( nd.send_request_msg == true ) {
+				retVal = 0;
+			} 
+			else {
+				nd.send_request_msg = true;
+				retVal = 1;
+			}
+			/* We cannot set a boolean every time a request should be sent.
 									  * So the user of protocol is expected to check the Chokestatus and FileStatus and decide to send
 									  * if he decides to send, he will use getRequest()
 									  */
 			logging.log("Peer [" + Integer.toString(myPeerID) + "] is unchoked by " + Integer.toString(nd.PeerID));
-			retVal=1;
 			break;
 		case INTERESTED:
 			nd.InterestStatus = true;
@@ -532,16 +589,16 @@ class Protocol {
 			retVal=2;	//We might have to send a interested message 
 			break;
 		case REQUEST: {
-			synchronized(nd){
-				if (nd.send_piece_msg == true) {
-					logging.debug("Request received even before servicing the old request");
-				}
-				if (nd.PeerChokeStatus == true) {
-					logging.debug("GOTCHA!!! - You are not supposed to send a piece request, you have been choked, still we will send you a piece in a peaceful manner");
-				}
-				nd.RequestpieceID = ByteToInt(packet, 5);
-				nd.send_piece_msg = true;
+			if (nd.send_piece_msg == true) {
+				logging.log("Request received even before servicing the old request");
 			}
+			if (nd.PeerChokeStatus == true) {
+				logging.debug("GOTCHA!!! - You are not supposed to send a piece request, you have been choked, still we will send you a piece in a peaceful manner");
+			}
+			nd.RequestpieceID = ByteToInt(packet, 5);
+			nd.send_piece_msg = true;
+			logging.log("Peer [" + myPeerID + "] has received a request for piece " + nd.RequestpieceID  + " from " 
+				    + nd.PeerID);
 			retVal=3;
 			break;
 		}
@@ -557,7 +614,19 @@ class Protocol {
 			UpdateBitField(pieceIndex);		
 			nd.notifyHaveMsg(pieceIndex);
 			retVal=4;
-			nd.send_request_msg=true;
+			if (nd.RequestpieceID == pieceIndex) {
+				nd.PendingRequests = false;
+			} 
+			else {
+				logging.log ("Received a different piece than requested");
+			}
+			if (curPieces == NumPieces) {
+				nd.send_not_interested_msg = true;
+				FileStatus = true;	//Indicate that the file is complete
+			}
+			else {
+				nd.send_request_msg=true;
+			}
 			break;
 		default:
 			break;

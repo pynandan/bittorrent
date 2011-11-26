@@ -34,7 +34,9 @@ public class SendThread implements Runnable{
 					peerProcObj.sharedObj.wait();	//wait till recvThread OR preferredThread OR optimisticThread to notifies you
 					node temp_node = peerProcObj.node_array.get(peer_index);
 					byte[] msg = null;
-					
+					/*prot.logging.debug (temp_node.PeerID+" Send thread notified(c,h,i,r,p) " + temp_node.send_choke_msg
+							    + " " +temp_node.send_have_msg + " " + temp_node.send_interested_msg + " " 
+							    + temp_node.send_request_msg + " " + temp_node.send_piece_msg);*/
 					/*
 					 * ALWAYS SET send_***_msg to false after getting the message
 					 * since when the preferred/optimistic thread does its work and then releases the lock on the sharedObj, 
@@ -70,6 +72,7 @@ public class SendThread implements Runnable{
 						if(msg != null)
 							temp_node.out.write(msg);
 					}
+					
 					if(temp_node.send_piece_msg == true){
 						msg = prot.getPiece(temp_node.RequestpieceID); //tODO: CHECK THIS with above todo marked
 						temp_node.send_piece_msg = false;
@@ -81,7 +84,7 @@ public class SendThread implements Runnable{
 							prot.FileStatus == false && 
 							temp_node.Chokestatus == false) {
 
-						msg = prot.getRequest();
+						msg = prot.getRequest(temp_node);
 						if(msg != null)
 							temp_node.out.write(msg);
 
@@ -92,13 +95,22 @@ public class SendThread implements Runnable{
 							 msg=null;
 						 }
 					}
+
+					//not interested message
+					if(temp_node.send_not_interested_msg == true){
+						msg = prot.getNotInterested(temp_node);
+						temp_node.send_not_interested_msg = false;
+						if(msg != null)
+							temp_node.out.write(msg);
+					}
+
 					//just to be safe, check for null message and then send the message
 				}
-				Thread.currentThread().yield();
+				//				Thread.currentThread().yield();
 			}
 		}
 		catch(Exception e){
-			prot.logging.debug(prot.myPeerID + "Exception in SendThread" + e.getMessage());
+			prot.logging.debug(prot.myPeerID + "Exception in SendThread" + e);
 			e.printStackTrace();
 		}
 		prot.logging.debug(prot.myPeerID + "Exiting SendThread belonging to node" + peerProcObj.node_array.get(peer_index).PeerID);

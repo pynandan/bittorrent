@@ -44,7 +44,7 @@ public class actualPeerProcess {
 					}				
 	
 					Random r = new Random();
-					int random_peer_index = r.nextInt(index_array.size()-1);
+					int random_peer_index = r.nextInt(index_array.size());
 					node opt_node = node_array.get(random_peer_index);
 					
 					/*
@@ -60,7 +60,7 @@ public class actualPeerProcess {
 						// BE IN THE LOOP TILL THE NODE HAS THE FOLLOWING STATUS
 						//		MESSAGE TYPE IS CHOKE 		&& 		NOT INTERESTED
 						while(opt_node.PeerChokeStatus == true && opt_node.InterestStatus == false){
-							random_peer_index = r.nextInt(index_array.size()-1);
+							random_peer_index = r.nextInt(index_array.size());
 							opt_node = node_array.get(random_peer_index);
 						}
 						

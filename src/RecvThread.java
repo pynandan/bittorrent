@@ -33,6 +33,7 @@ public class RecvThread implements Runnable{
 				synchronized(peerProcObj.sharedObj){
 					int ret_val = prot.processMessage(packet, peerProcObj.node_array.get(peer_index));
 					if(ret_val > 0){
+						prot.logging.debug ("Recv thread notifying send thread");
 						peerProcObj.sharedObj.notifyAll();
 					}
 				}
