@@ -73,7 +73,10 @@ class Protocol {
 		void debug(String str) {
 			//	log("Debug: " + str);
 		}
-		
+
+		void error(String str) {
+			//	log("Error: " + str);
+		}
 	}
 	
 //Functions
@@ -152,7 +155,7 @@ class Protocol {
 				s.close();
 			}
 		}
-		logging.log ("NumPieces = " + NumPieces);
+		logging.debug ("NumPieces = " + NumPieces);
 		bitField = new boolean[NumPieces];
 		requestBitField = new boolean[NumPieces];
 	}
@@ -461,8 +464,7 @@ class Protocol {
 		//logging.debug("Entering getRequest");
 		while (true) {
 			if (FileStatus == true) {
-				logging.debug("Oh my god ..file is complete why on earth you need a request packet" +
-						"Send him a dummy packet and hope he checks the FileStatus");
+				logging.error("Oh my god ..file is complete why on earth you need a request packet. Send a null");
 				return null;
 			}
 			if (curPieces == NumPieces) {
@@ -524,7 +526,7 @@ class Protocol {
 		IntToByte(MsgLen,Msg,0);			//Write Messaage Length
 		Msg[4] = REQUEST;					//Message Type
 		IntToByte(rand, Msg, MSGLEN+1);		//Payload
-		logging.log("Sending Request" + rand);
+		logging.debug("Sending Request" + rand);
 		return Msg;
 	}
 	
@@ -538,7 +540,7 @@ class Protocol {
 		byte[] Piece = readPiece(pieceIndex);	//Read Piece	
 		// (Msg Length)0-3  (Msg Type)4  (Piece Index)5-8	(Piece data) 9-X
 		System.arraycopy(Piece, 0, Msg, 9, PieceSize); // Payload b. Piece data 
-		logging.log("Sending Piece: " + pieceIndex);
+		logging.debug("Sending Piece: " + pieceIndex);
 		return Msg;
 	}
 
@@ -598,7 +600,7 @@ class Protocol {
 			}
 			nd.RequestpieceID = ByteToInt(packet, 5);
 			if (nd.send_piece_msg == true) {
-				logging.log("Request received even before servicing the old request from " + nd.PeerID + " for " + nd.RequestpieceID);
+				logging.error("Request received even before servicing the old request from " + nd.PeerID + " for " + nd.RequestpieceID);
 			}
 
 			nd.send_piece_msg = true;
@@ -622,11 +624,12 @@ class Protocol {
 			retVal=4;
 		
 			if (nd.RequestpieceID == pieceIndex) {
-				logging.log ("Received a different piece than requested");
+				logging.error ("Received a different piece than requested");
 			}
 			nd.PendingRequests = false;
 
 			if (curPieces == NumPieces) {
+				logging.log("Peer [" + Integer.toString(myPeerID) + "] has downloaded the complete file");
 				nd.notifyNotInterested();
 				nd.send_not_interested_msg=true;
 				FileStatus = true;	//Indicate that the file is complete
